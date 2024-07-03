@@ -13,3 +13,4 @@
 ### Improvements (in future)
 - Decouple the REST service from the scheduler for scaling service and scheduler independently.
 - Introduce some sort of state management/peristence for jobs.
+- Change job execution to some sort of data ingestion/web crawler based job.
