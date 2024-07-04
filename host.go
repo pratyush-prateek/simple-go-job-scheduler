@@ -19,8 +19,8 @@ func main() {
 	flag.Parse()
 
 	// Some upper limit on number of goroutines
-	if *maxWorkersPtr > 50000 {
-		fmt.Printf("Initialisation with %v number of workers is not recommended", *maxWorkersPtr)
+	if *maxWorkersPtr > 1000000 {
+		fmt.Printf("Initialisation with more than %v number of workers is not recommended", *maxWorkersPtr)
 		os.Exit(1)
 	}
 
