@@ -5,7 +5,7 @@ type JobResponse struct {
 }
 
 type SchedulerStatsResponse struct {
-	WorkersRunning int64
+	WorkersRunning int32
 }
 
 type SystemResponse struct {

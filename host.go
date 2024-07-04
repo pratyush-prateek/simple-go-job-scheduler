@@ -14,20 +14,27 @@ import (
 
 func main() {
 	SystemSetup()
-	maxWorkersPtr := flag.Int64("maxworkers", 500, "Max number of workers")
+	maxWorkersPtr := flag.Int("maxworkers", 500, "Max number of workers")
+	isDynamicSchedulerPtr := flag.Bool("dynamic", true, "Whether to allocate workers dynamically")
 	flag.Parse()
 
-	if *maxWorkersPtr > int64(50000) {
+	// Some upper limit on number of goroutines
+	if *maxWorkersPtr > 50000 {
 		fmt.Printf("Initialisation with %v number of workers is not recommended", *maxWorkersPtr)
 		os.Exit(1)
 	}
 
+	// Create and start job scheduler
 	fmt.Println("Creating and starting job scheduler")
-	jobScheduler := scheduler.JobScheduler{
-		MaxGoroutines: *maxWorkersPtr,
-		JobChannel:    make(chan scheduler.PrintJob),
+	jobScheduler := scheduler.CreateJobScheduler(int32(*maxWorkersPtr), *isDynamicSchedulerPtr)
+	err := jobScheduler.Start()
+
+	if err != nil {
+		fmt.Println("Error starting scheduler")
+		os.Exit(1)
 	}
-	jobScheduler.Start()
+
+	// API contract for interacting with scheduler. Scheduler can be used as a plug-n-play library as well !!
 	router := gin.Default()
 	router.POST("/jobs/create", func(context *gin.Context) {
 		var jobRequest dto.JobRequest
@@ -53,7 +60,16 @@ func main() {
 		// An admin route
 		// authToken := context.Request.Header["Authorization"] - verify some admin token
 
-		jobScheduler.ShutdownScheduler()
+		err := jobScheduler.ShutdownScheduler()
+
+		if err != nil {
+			// TODO: Handle internal server error as well
+			context.IndentedJSON(http.StatusBadRequest, dto.SystemResponse{
+				Message: err.Error(),
+			})
+			return
+		}
+
 		context.IndentedJSON(http.StatusOK, dto.SystemResponse{
 			Message: "Shutting down all workers.",
 		})
