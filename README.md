@@ -29,6 +29,7 @@ scheduler.ScheduleJob(job)
 - Decouple the REST service from the scheduler for scaling service and scheduler independently.
 - Introduce some sort of state management/peristence for jobs.
 - Change job execution to some sort of data ingestion/web crawler based job.
+- Add support for removal of idle goroutines in dynamic mode. Currently, created goroutines remain idle in dynamic mode.
 - Currently, all jobs are executed immediately. Support following job types:
     - One time scheduled jobs
     - Periodic jobs given number of times
