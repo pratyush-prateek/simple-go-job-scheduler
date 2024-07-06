@@ -16,6 +16,7 @@ func main() {
 	SystemSetup()
 	maxWorkersPtr := flag.Int("maxworkers", 500, "Max number of workers")
 	isDynamicSchedulerPtr := flag.Bool("dynamic", true, "Whether to allocate workers dynamically")
+	idleWorkerTimeoutInSecPtr := flag.Int("idleworkertimeoutinsec", 10, "Timeout for idle workers to shutdown")
 	flag.Parse()
 
 	// Some upper limit on number of goroutines
@@ -24,9 +25,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create and start job scheduler
+	// Create job scheduler
 	fmt.Println("Creating and starting job scheduler")
-	jobScheduler := scheduler.CreateJobScheduler(int32(*maxWorkersPtr), *isDynamicSchedulerPtr)
+	jobScheduler := scheduler.CreateJobScheduler(
+		int32(*maxWorkersPtr),
+		*isDynamicSchedulerPtr,
+		int32(*idleWorkerTimeoutInSecPtr),
+	)
+
+	// Start job scheduler
 	err := jobScheduler.Start()
 
 	if err != nil {
@@ -72,6 +79,15 @@ func main() {
 
 		context.IndentedJSON(http.StatusOK, dto.SystemResponse{
 			Message: "Shutting down all workers.",
+		})
+	})
+	router.GET("/jobs/schedulerstats", func(context *gin.Context) {
+		// An admin route
+		// authToken := context.Request.Header["Authorization"] - verify some admin token
+
+		schedulerStats := jobScheduler.GetJobSchedulerStats()
+		context.IndentedJSON(http.StatusOK, dto.SystemResponse{
+			Message: fmt.Sprintf("Current workers running: %v", schedulerStats.WorkersRunning),
 		})
 	})
 
