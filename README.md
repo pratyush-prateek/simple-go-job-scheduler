@@ -19,12 +19,16 @@ scheduler := CreateJobScheduler(10000, false, 5)
 scheduler.Start()
 
 // Queue a job
-job := PrintJob{
-    Message: "Print the following message",
+job := JobDefinition{
+    Callback: func(){
+        fmt.Printf("Execute it")
+    },
 }
 scheduler.ScheduleJob(job)
 
 ```
+- If goroutines are created in callback function, then the caller must make sure that the goroutines are properly waited on and resources used in callback function are released properly.
+
 
 ### Improvements (in future)
 - Decouple the REST service from the scheduler for scaling service and scheduler independently.
