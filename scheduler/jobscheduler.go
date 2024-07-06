@@ -64,7 +64,7 @@ func (jobScheduler *JobScheduler) Start() error {
 				jobScheduler.WorkerWaitGroup.Done()
 				atomic.AddInt32(&jobScheduler.CurrentGoroutines, -1)
 			}()
-			WorkerFunction(jobScheduler.JobChannel, i, jobScheduler.IdleWorkerTimeoutInSec)
+			StaticWorkerFunction(jobScheduler.JobChannel, i)
 			runtime.Goexit() // release all resources from this goroutime for GC
 		}()
 	}
@@ -100,7 +100,7 @@ func (jobScheduler *JobScheduler) ScheduleJob(job PrintJob) error {
 					jobScheduler.WorkerWaitGroup.Done()
 					atomic.AddInt32(&jobScheduler.CurrentGoroutines, -1)
 				}()
-				WorkerFunction(jobScheduler.JobChannel, newCurrentNumberOfGoroutines, jobScheduler.IdleWorkerTimeoutInSec)
+				DynamicWorkerFunction(jobScheduler.JobChannel, newCurrentNumberOfGoroutines, jobScheduler.IdleWorkerTimeoutInSec)
 				runtime.Goexit() // release all resources from this goroutime for GC
 			}()
 
@@ -137,8 +137,8 @@ func (jobScheduler *JobScheduler) GetJobSchedulerStats() JobSchedulerStats {
 	}
 }
 
-// Worker function which runs for every goroutines
-func WorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeoutInSec int32) {
+// Dynamic worker function which runs for every goroutines
+func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeoutInSec int32) {
 	fmt.Printf("Worker with id %v started \n", workerId)
 
 	// Create a context for cancellation
@@ -181,6 +181,19 @@ func WorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeoutInSec
 			return
 		}
 	}
+}
+
+// Static worker function
+func StaticWorkerFunction(jobChannel chan PrintJob, workerId int32) {
+	fmt.Printf("Worker with id %v started \n", workerId)
+	for job := range jobChannel {
+		statement := job.Statement
+		fmt.Printf("Job picked up by worker %v \n", workerId) // can be any job
+		fmt.Printf("Job execution with statement %v \n", statement)
+		fmt.Println("------------")
+	}
+
+	fmt.Println("Shutting down worker")
 }
 
 func CreateJobScheduler(numWorkers int32, isDynamic bool, idleWorkerTimeoutInSec int32) JobScheduler {
