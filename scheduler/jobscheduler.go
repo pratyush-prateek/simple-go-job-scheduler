@@ -12,8 +12,8 @@ import (
 
 // Job metadata
 // It can be any job which makes network calls, processes files, crawl web etc.
-type PrintJob struct {
-	Statement string
+type JobDefinition struct {
+	Callback func()
 }
 
 // Scheduler states
@@ -26,7 +26,7 @@ type JobScheduler struct {
 	CurrentGoroutines      int32
 	MaxGoroutines          int32
 	IdleWorkerTimeoutInSec int32
-	JobChannel             chan PrintJob
+	JobChannel             chan JobDefinition
 	IsDynamic              bool
 	WorkerWaitGroup        *sync.WaitGroup
 }
@@ -39,7 +39,7 @@ type JobSchedulerStats struct {
 // interface for job scheduler
 type Scheduler interface {
 	Start()
-	ScheduleJob(job PrintJob)
+	ScheduleJob(job JobDefinition)
 	ShutdownScheduler()
 	GetJobSchedulerStats() JobSchedulerStats
 }
@@ -73,7 +73,7 @@ func (jobScheduler *JobScheduler) Start() error {
 }
 
 // interface implementation for scheduler job
-func (jobScheduler *JobScheduler) ScheduleJob(job PrintJob) error {
+func (jobScheduler *JobScheduler) ScheduleJob(job JobDefinition) error {
 	// When scheduler is shutdown already, return error
 	if atomic.LoadInt32(&jobScheduler.State) == SchedulerState_SHUTDOWN {
 		return errors.New("cannot schedule job when scheduler in shutdown state")
@@ -142,7 +142,7 @@ func (jobScheduler *JobScheduler) GetJobSchedulerStats() JobSchedulerStats {
 }
 
 // Dynamic worker function which runs for every goroutines
-func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeoutInSec int32) {
+func DynamicWorkerFunction(jobChannel chan JobDefinition, workerId int32, workerTimeoutInSec int32) {
 	fmt.Printf("Worker with id %v started \n", workerId)
 	timer := time.NewTimer(time.Second * time.Duration(workerTimeoutInSec))
 
@@ -162,9 +162,9 @@ func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeo
 			}
 
 			// Execute the job
-			statement := job.Statement
+			callbackFunction := job.Callback
 			fmt.Printf("Job picked up by worker %v \n", workerId) // can be any job
-			fmt.Printf("Job execution with statement %v \n", statement)
+			callbackFunction()
 			fmt.Println("------------")
 
 			// Update the timer
@@ -184,12 +184,12 @@ func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeo
 }
 
 // Static worker function
-func StaticWorkerFunction(jobChannel chan PrintJob, workerId int32) {
+func StaticWorkerFunction(jobChannel chan JobDefinition, workerId int32) {
 	fmt.Printf("Worker with id %v started \n", workerId)
 	for job := range jobChannel {
-		statement := job.Statement
+		callbackFunction := job.Callback
 		fmt.Printf("Job picked up by worker %v \n", workerId) // can be any job
-		fmt.Printf("Job execution with statement %v \n", statement)
+		callbackFunction()
 		fmt.Println("------------")
 	}
 
@@ -198,18 +198,18 @@ func StaticWorkerFunction(jobChannel chan PrintJob, workerId int32) {
 
 func CreateJobScheduler(numWorkers int32, isDynamic bool, idleWorkerTimeoutInSec int32) (JobScheduler, error) {
 	if numWorkers == 0 {
-		return JobScheduler{}, errors.New("Number of workers cannot be 0")
+		return JobScheduler{}, errors.New("number of workers cannot be 0")
 	}
 
 	if idleWorkerTimeoutInSec == 0 {
-		return JobScheduler{}, errors.New("Idle worker timeout cannot be 0")
+		return JobScheduler{}, errors.New("idle worker timeout cannot be 0")
 	}
 
 	var workerWaitGroup sync.WaitGroup
 	return JobScheduler{
 		MaxGoroutines:          numWorkers,
 		IsDynamic:              isDynamic,
-		JobChannel:             make(chan PrintJob),
+		JobChannel:             make(chan JobDefinition),
 		WorkerWaitGroup:        &workerWaitGroup,
 		State:                  SchedulerState_SHUTDOWN,
 		IdleWorkerTimeoutInSec: idleWorkerTimeoutInSec,

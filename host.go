@@ -58,8 +58,10 @@ func main() {
 			return
 		}
 
-		printJob := scheduler.PrintJob{
-			Statement: jobRequest.Statement,
+		printJob := scheduler.JobDefinition{
+			Callback: func() {
+				fmt.Printf("Job execution with id %v and statement %v", jobRequest.ID, jobRequest.Statement)
+			},
 		}
 
 		// Schedule job for immediate execution
