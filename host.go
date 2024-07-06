@@ -63,7 +63,15 @@ func main() {
 		}
 
 		// Schedule job for immediate execution
-		jobScheduler.ScheduleJob(printJob)
+		err := jobScheduler.ScheduleJob(printJob)
+
+		if err != nil {
+			context.IndentedJSON(http.StatusBadRequest, dto.SystemResponse{
+				Message: err.Error(),
+			})
+			return
+		}
+
 		context.IndentedJSON(http.StatusCreated, dto.JobResponse{
 			Message: "Job created and queued",
 		})

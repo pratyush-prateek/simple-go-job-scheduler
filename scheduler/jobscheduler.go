@@ -74,6 +74,11 @@ func (jobScheduler *JobScheduler) Start() error {
 
 // interface implementation for scheduler job
 func (jobScheduler *JobScheduler) ScheduleJob(job PrintJob) error {
+	// When scheduler is shutdown already, return error
+	if atomic.LoadInt32(&jobScheduler.State) == SchedulerState_SHUTDOWN {
+		return errors.New("cannot schedule job when scheduler in shutdown state")
+	}
+
 	if !jobScheduler.IsDynamic {
 		// In case of static scheduler, we don't need to create a new goroutine
 		jobScheduler.JobChannel <- job
