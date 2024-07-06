@@ -27,13 +27,14 @@ job := JobDefinition{
 scheduler.ScheduleJob(job)
 
 ```
-- If goroutines are created in callback function, then the caller must make sure that the goroutines are properly waited on and resources used in callback function are released properly.
+- If goroutines are created in callback function, then the caller must make sure that the goroutines are properly waited on and resources used in callback function are released properly. Also, there is no default timeout configured for callbacks, callers must enforce if there is a chance of waiting on blocking operations.
 
 
 ### Improvements (in future)
 - Decouple the REST service from the scheduler for scaling service and scheduler independently.
 - Introduce some sort of state management/peristence for jobs.
 - Change job execution to some sort of data ingestion/web crawler based job.
+- Support timeouts for callback executions.
 - Currently, all jobs are executed immediately. Support following job types:
     - One time scheduled jobs
     - Periodic jobs given number of times
