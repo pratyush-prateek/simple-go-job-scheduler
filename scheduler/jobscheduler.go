@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"context"
 	"fmt"
 	"runtime"
 	"sync"
@@ -140,15 +139,7 @@ func (jobScheduler *JobScheduler) GetJobSchedulerStats() JobSchedulerStats {
 // Dynamic worker function which runs for every goroutines
 func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeoutInSec int32) {
 	fmt.Printf("Worker with id %v started \n", workerId)
-
-	// Create a context for cancellation
-	context, cancel := context.WithCancel(context.Background())
-	defer cancel() // always close
-
-	// Setup a timer function which will cancel the context after `IdleWorkerTimeoutInSec` seconds
-	timer := time.AfterFunc(time.Second*time.Duration(workerTimeoutInSec), func() {
-		cancel()
-	})
+	timer := time.NewTimer(time.Second * time.Duration(workerTimeoutInSec))
 
 	// Very rare case can happen, this worker picks a job and at the same time context is cancelled
 	// If job is picked up, reset the timer, else job will be missed, can't help
@@ -157,6 +148,10 @@ func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeo
 		case job, channelOpen := <-jobChannel:
 			if !channelOpen {
 				// If job channel is closed
+				// Shutdown timer and drain channel
+				if !timer.Stop() {
+					<-timer.C
+				}
 				fmt.Printf("Shutting down worker %v \n", workerId)
 				return
 			}
@@ -174,7 +169,7 @@ func DynamicWorkerFunction(jobChannel chan PrintJob, workerId int32, workerTimeo
 
 			timer.Reset(time.Second * time.Duration(workerTimeoutInSec))
 
-		case <-context.Done():
+		case <-timer.C:
 			// Worker times out
 			fmt.Printf("Worker with id %v timed out after %v seconds \n", workerId, workerTimeoutInSec)
 			fmt.Printf("Shutting down worker %v \n", workerId)
