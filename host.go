@@ -27,17 +27,22 @@ func main() {
 
 	// Create job scheduler
 	fmt.Println("Creating and starting job scheduler")
-	jobScheduler := scheduler.CreateJobScheduler(
+	jobScheduler, error := scheduler.CreateJobScheduler(
 		int32(*maxWorkersPtr),
 		*isDynamicSchedulerPtr,
 		int32(*idleWorkerTimeoutInSecPtr),
 	)
 
+	if error != nil {
+		fmt.Printf("Error starting scheduler: %v \n", error.Error())
+		os.Exit(1)
+	}
+
 	// Start job scheduler
 	err := jobScheduler.Start()
 
 	if err != nil {
-		fmt.Println("Error starting scheduler")
+		fmt.Printf("Error starting scheduler: %v \n", err.Error())
 		os.Exit(1)
 	}
 

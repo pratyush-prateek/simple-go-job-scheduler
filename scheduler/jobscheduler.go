@@ -191,7 +191,15 @@ func StaticWorkerFunction(jobChannel chan PrintJob, workerId int32) {
 	fmt.Println("Shutting down worker")
 }
 
-func CreateJobScheduler(numWorkers int32, isDynamic bool, idleWorkerTimeoutInSec int32) JobScheduler {
+func CreateJobScheduler(numWorkers int32, isDynamic bool, idleWorkerTimeoutInSec int32) (JobScheduler, error) {
+	if numWorkers == 0 {
+		return JobScheduler{}, errors.New("Number of workers cannot be 0")
+	}
+
+	if idleWorkerTimeoutInSec == 0 {
+		return JobScheduler{}, errors.New("Idle worker timeout cannot be 0")
+	}
+
 	var workerWaitGroup sync.WaitGroup
 	return JobScheduler{
 		MaxGoroutines:          numWorkers,
@@ -200,5 +208,5 @@ func CreateJobScheduler(numWorkers int32, isDynamic bool, idleWorkerTimeoutInSec
 		WorkerWaitGroup:        &workerWaitGroup,
 		State:                  SchedulerState_SHUTDOWN,
 		IdleWorkerTimeoutInSec: idleWorkerTimeoutInSec,
-	}
+	}, nil
 }
